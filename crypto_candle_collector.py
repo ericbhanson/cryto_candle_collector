@@ -92,7 +92,7 @@ def return_rounded_time(ts, granularity):
 settings = load_settings(sys.argv[1])
 
 # Assign those specifications to individual variables.
-exchange_name = settings['ccxt']['exchange_name']
+exchange_name = settings['ccxt']['exchange_id']
 limit = settings['ccxt']['limit']
 since = datetime.datetime.strptime(settings['ccxt']['since'], '%m/%d/%Y')
 timeframe = settings['ccxt']['timeframe']

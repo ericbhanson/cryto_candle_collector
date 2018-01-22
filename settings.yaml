@@ -1,2 +1,2 @@
-ccxt: {exchange_name: '', limit: , since: , timeframe: ''}
+ccxt: {exchange_id: '', limit: , since: , timeframe: ''}
 mysql_connection: {dbname: '', host: '', password: '', protocol: mysql+mysqlconnector, user: ''}
