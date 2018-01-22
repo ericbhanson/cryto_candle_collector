@@ -1,3 +1,2 @@
-ccxt: {exchange_name: gdax, limit: 350, since: 1/1/2017, timeframe: '15m'}
-mysql_connection: {dbname: da_ponz, host: localhost, password: 'xRgD6F[aPppfMbRrmRcjHVNcUPukYTxN',
-protocol: mysql+mysqlconnector, user: root}
+ccxt: {exchange_name: '', limit: , since: , timeframe: ''}
+mysql_connection: {dbname: '', host: '', password: '', protocol: mysql+mysqlconnector, user: ''}
