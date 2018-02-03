@@ -20,6 +20,24 @@ def connect_to_db(db_settings):
 	return db_connection
 
 
+def create_since_ts(db_connection, granularity, settings):
+	table = get_table(db_connection, 'testing_data')
+	limit = 1
+	order_by = sqlalchemy.desc('utc_timestamp')
+	select = [table.c.utc_timestamp]
+	where = table.c.timeframe == granularity
+	query = sqlalchemy.select(select).where(where).order_by(order_by).limit(limit)
+	results = db_connection.execute(query).fetchall()
+
+	if not results:
+		since = datetime.datetime.strptime(settings, '%Y-%m-%d %H:%M:%S')
+
+	else:
+		since = results[0][0]
+
+	return since
+
+
 def create_testing_data_list(exchange, granularity, limit, request_loops, since, timeframe):
 	testing_data_list = []
 	timezone = datetime.timezone.utc
@@ -70,6 +88,13 @@ def create_uohlcv_dict(granularity, uohlcv):
 	return uohlcv_dict
 
 
+def get_table(db_connection, table_name):
+	metadata = sqlalchemy.MetaData(bind=db_connection)
+	table = sqlalchemy.Table(table_name, metadata, autoload=True, autoload_with=db_connection)
+
+	return table
+
+
 def load_settings(file_location):
 	with open(file_location + 'settings.yaml', 'rb') as settings_file:
 		yaml_settings = settings_file.read()
@@ -94,7 +119,6 @@ settings = load_settings(sys.argv[1])
 # Assign those specifications to individual variables.
 exchange_name = settings['ccxt']['exchange_id']
 limit = settings['ccxt']['limit']
-since = datetime.datetime.strptime(settings['ccxt']['since'], '%Y-%m-%d %H:%M:%S')
 timeframe = settings['ccxt']['timeframe']
 
 # Load the exchange information and create a list of traded symbols.
@@ -103,6 +127,12 @@ exchange = exchange_method()
 granularity = exchange.timeframes[timeframe]
 markets = exchange.load_markets()
 symbol_list = [symbol for symbol in markets if 'USD' in symbol]
+
+# Connect to the database.
+db_connection = connect_to_db(settings['mysql_connection'])
+
+# Determine the start date for collecting data.
+since = create_since_ts(db_connection, granularity, settings['ccxt']['since'])
 
 # Every exchange has a limit to the amount of data it will return from an API call for candlesticks. To request data
 # beyond that limit, a variable number of loops is required. This code calculates that variable number, based on the
@@ -115,7 +145,6 @@ for symbol in symbol_list:
 	print('Getting data for the symbol {}...'.format(symbol))
 
 	testing_data_list = create_testing_data_list(exchange, granularity, limit, request_loops, since, timeframe)
-	db_connection = connect_to_db(settings['mysql_connection'])
-	table = sqlalchemy.Table('testing_data', sqlalchemy.MetaData(), autoload=True, autoload_with=db_connection)
+	table = get_table(db_connection, 'testing_data')
 	insert_query = table.insert(testing_data_list)
 	db_connection.execute(insert_query)
