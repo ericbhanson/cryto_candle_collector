@@ -46,7 +46,7 @@ def create_testing_data_list(exchange, granularity, limit, request_loops, since,
 
 			else:
 				for uohlcv in uohlcv_list:
-					uohlcv_dict = create_uohlcv_dict(uohlcv)
+					uohlcv_dict = create_uohlcv_dict(granularity, uohlcv)
 					testing_data_list.append(uohlcv_dict)
 
 				break
@@ -56,7 +56,7 @@ def create_testing_data_list(exchange, granularity, limit, request_loops, since,
 	return testing_data_list
 
 
-def create_uohlcv_dict(uohlcv):
+def create_uohlcv_dict(granularity, uohlcv):
 	close_price = float(uohlcv[4])
 	high_price = float(uohlcv[2])
 	low_price = float(uohlcv[3])
@@ -64,7 +64,7 @@ def create_uohlcv_dict(uohlcv):
 	utc_timestamp = datetime.datetime.utcfromtimestamp(uohlcv[0] // 1000)
 	volume = float(uohlcv[5])
 	uohlcv_dict = {'close': close_price, 'high': high_price, 'low': low_price, 'open': open_price,
-				   'symbol': symbol, 'timeframe': timeframe, 'utc_timestamp': utc_timestamp,
+				   'symbol': symbol, 'timeframe': granularity, 'utc_timestamp': utc_timestamp,
 				   'volume': volume}
 
 	return uohlcv_dict
@@ -94,7 +94,7 @@ settings = load_settings(sys.argv[1])
 # Assign those specifications to individual variables.
 exchange_name = settings['ccxt']['exchange_id']
 limit = settings['ccxt']['limit']
-since = datetime.datetime.strptime(settings['ccxt']['since'], '%m/%d/%Y')
+since = datetime.datetime.strptime(settings['ccxt']['since'], '%Y-%m-%d %H:%M:%S')
 timeframe = settings['ccxt']['timeframe']
 
 # Load the exchange information and create a list of traded symbols.
