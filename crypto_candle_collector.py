@@ -33,7 +33,7 @@ def create_since_ts(db_connection, granularity, settings):
 		since = datetime.datetime.strptime(settings, '%Y-%m-%d %H:%M:%S')
 
 	else:
-		since = results[0][0]
+		since = results[0][0] + datetime.timedelta(seconds=granularity)
 
 	return since
 
@@ -119,32 +119,37 @@ settings = load_settings(sys.argv[1])
 # Assign those specifications to individual variables.
 exchange_name = settings['ccxt']['exchange_id']
 limit = settings['ccxt']['limit']
-timeframe = settings['ccxt']['timeframe']
+timeframes = settings['ccxt']['timeframes']
 
 # Load the exchange information and create a list of traded symbols.
 exchange_method = getattr(ccxt, exchange_name)
 exchange = exchange_method()
-granularity = exchange.timeframes[timeframe]
+
 markets = exchange.load_markets()
 symbol_list = [symbol for symbol in markets if 'USD' in symbol]
 
 # Connect to the database.
 db_connection = connect_to_db(settings['mysql_connection'])
 
-# Determine the start date for collecting data.
-since = create_since_ts(db_connection, granularity, settings['ccxt']['since'])
+for timeframe in timeframes:
+	granularity = exchange.timeframes[timeframe]
 
-# Every exchange has a limit to the amount of data it will return from an API call for candlesticks. To request data
-# beyond that limit, a variable number of loops is required. This code calculates that variable number, based on the
-# requested start date, the granularity of the candlestick, and the data request limit.
-adj_now = return_rounded_time(datetime.datetime.utcnow(), granularity)
-request_loops = int(math.ceil((adj_now - since).total_seconds() / (granularity * limit)))
+	# Determine the start date for collecting data.
+	since = create_since_ts(db_connection, granularity, settings['ccxt']['since'])
 
-# Request the data for each symbol in the symbol list from the exchange API and store the results in a database.
-for symbol in symbol_list:
-	print('Getting data for the symbol {}...'.format(symbol))
+	# Every exchange has a limit to the amount of data it will return from an API call for candlesticks. To request
+	# data beyond that limit, a variable number of loops is required. This code calculates that variable number,
+	# based on the requested start date, the granularity of the candlestick, and the data request limit.
+	adj_now = return_rounded_time(datetime.datetime.utcnow(), granularity)
+	request_loops = int(math.ceil((adj_now - since).total_seconds() / (granularity * limit)))
 
-	testing_data_list = create_testing_data_list(exchange, granularity, limit, request_loops, since, timeframe)
-	table = get_table(db_connection, 'testing_data')
-	insert_query = table.insert(testing_data_list)
-	db_connection.execute(insert_query)
+	# Request the data for each symbol in the symbol list from the exchange API and store the results in a database.
+	for symbol in symbol_list:
+		print('Getting data for the symbol {} at the {} seconds granularity...'.format(symbol, granularity))
+
+		testing_data_list = create_testing_data_list(exchange, granularity, limit, request_loops, since, timeframe)
+		table = get_table(db_connection, 'testing_data')
+		insert_query = table.insert(testing_data_list)
+		db_connection.execute(insert_query)
+
+		print('\n')
